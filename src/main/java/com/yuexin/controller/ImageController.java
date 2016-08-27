@@ -1,10 +1,10 @@
 package com.yuexin.controller;
 
 import com.yuexin.bean.FileUrl;
-import com.yuexin.util.DateUtil;
-import com.yuexin.util.GenResult;
-import com.yuexin.util.HttpPostUtil;
-import com.yuexin.util.ImgCompress;
+import com.yuexin.utils.DateUtil;
+import com.yuexin.utils.GenResult;
+import com.yuexin.utils.HttpPostUtil;
+import com.yuexin.utils.ImgCompress;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;

@@ -1,4 +1,4 @@
-package com.yuexin.util;
+package com.yuexin.utils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

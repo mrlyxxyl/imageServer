@@ -1,4 +1,4 @@
-package com.yuexin.util;
+package com.yuexin.utils;
 
 import com.sun.image.codec.jpeg.JPEGCodec;
 import com.sun.image.codec.jpeg.JPEGImageEncoder;

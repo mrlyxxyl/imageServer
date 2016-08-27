@@ -1,4 +1,4 @@
-package com.yuexin.util;
+package com.yuexin.utils;
 
 import net.sf.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
