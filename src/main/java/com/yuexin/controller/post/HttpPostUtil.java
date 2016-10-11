@@ -1,14 +1,10 @@
 package com.yuexin.controller.post;
 
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.stream.ImageInputStream;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 public class HttpPostUtil {
@@ -83,24 +79,9 @@ public class HttpPostUtil {
             File value = entry.getValue();
             ds.writeBytes("--" + boundary + "\r\n");
             ds.writeBytes("Content-Disposition: form-data; name=\"" + name + "\"; filename=\"" + encode(value.getName()) + "\"\r\n");
-            ds.writeBytes("Content-Type: " + getContentType(value) + "\r\n");
             ds.writeBytes("\r\n");
             ds.write(getBytes(value));
             ds.writeBytes("\r\n");
-        }
-    }
-
-    private String getContentType(File f) throws Exception {
-        ImageInputStream inputStream = ImageIO.createImageInputStream(f);
-        if (inputStream == null) {
-            return "application/octet-stream";
-        }
-        Iterator<ImageReader> it = ImageIO.getImageReaders(inputStream);
-        inputStream.close();
-        if (it.hasNext()) {
-            return "image/" + it.next().getFormatName().toLowerCase();
-        } else {
-            return "application/octet-stream";
         }
     }
 
@@ -130,11 +111,12 @@ public class HttpPostUtil {
 
     public static void main(String[] args) throws Exception {
         HttpPostUtil u = new HttpPostUtil("http://localhost:8080/imageServer/image/upload.do");
-        u.addFileParameter("image", new File("D:\\index.jpg"));
+        u.addFileParameter("image", new File("D:\\aa.jpg"));
         u.addTextParameter("host", "http://localhost:8080");
         byte[] b = u.send();
         u.clearAllParameters();
         String result = new String(b);
         System.out.println(result);
+//        System.out.println(u.getContentType(new File("D:\\header.txt")));
     }
 }
