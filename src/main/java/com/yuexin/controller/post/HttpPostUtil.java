@@ -5,30 +5,34 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 public class HttpPostUtil {
-    URL url;
-    HttpURLConnection conn;
-    String boundary = "--------httpPost123";
-    Map<String, String> textParams = new HashMap<String, String>();
-    Map<String, File> fileParams = new HashMap<String, File>();
-    DataOutputStream ds;
+    private URL url;
+    private HttpURLConnection conn;
+    private String boundary = "--------httpPost123";
+    private Map<String, String> textParams = new HashMap<String, String>();
+    private Map<String, File> fileParams = new HashMap<String, File>();
+    private DataOutputStream ds;
 
     public HttpPostUtil(String url) throws Exception {
         this.url = new URL(url);
+        conn = (HttpURLConnection) this.url.openConnection();
+        conn.setDoOutput(true);
+        conn.setUseCaches(false);
+        conn.setConnectTimeout(10000);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+        conn.setRequestProperty("connection", "Keep-Alive");
+        conn.setRequestProperty("Charset", "UTF-8");
+        conn.setRequestProperty("Accept-Charset", "UTF-8");
+        conn.connect();
     }
 
-    //重新设置要请求的服务器地址，即上传文件的地址。
-    public void setUrl(String url) throws Exception {
-        this.url = new URL(url);
-    }
 
     //增加一个普通字符串数据到form表单数据中
     public void addTextParameter(String name, String value) {
@@ -48,13 +52,6 @@ public class HttpPostUtil {
 
     // 发送数据到服务器，返回一个字节包含服务器的返回结果的数组
     public byte[] send() throws Exception {
-        initConnection();
-        try {
-            conn.connect();
-        } catch (SocketTimeoutException e) {
-            // something
-            throw new RuntimeException();
-        }
         ds = new DataOutputStream(conn.getOutputStream());
         writeFileParams();
         writeStringParams();
@@ -69,38 +66,21 @@ public class HttpPostUtil {
         return out.toByteArray();
     }
 
-    //文件上传的connection的一些必须设置
-    private void initConnection() throws Exception {
-        conn = (HttpURLConnection) this.url.openConnection();
-        conn.setDoOutput(true);
-        conn.setUseCaches(false);
-        conn.setConnectTimeout(10000); //连接超时为10秒
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-        conn.setRequestProperty("connection", "Keep-Alive");
-        conn.setRequestProperty("Charsert", "UTF-8");
-        conn.setRequestProperty("Accept-Charset", "UTF-8");
-    }
-
     //普通字符串数据
     private void writeStringParams() throws Exception {
-        Set<String> keySet = textParams.keySet();
-        for (Iterator<String> it = keySet.iterator(); it.hasNext(); ) {
-            String name = it.next();
-            String value = textParams.get(name);
+        for (Map.Entry<String, String> entry : textParams.entrySet()) {
             ds.writeBytes("--" + boundary + "\r\n");
-            ds.writeBytes("Content-Disposition: form-data; name=\"" + name + "\"\r\n");
+            ds.writeBytes("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"\r\n");
             ds.writeBytes("\r\n");
-            ds.writeBytes(encode(value) + "\r\n");
+            ds.writeBytes(encode(entry.getValue()) + "\r\n");
         }
     }
 
     //文件数据
     private void writeFileParams() throws Exception {
-        Set<String> keySet = fileParams.keySet();
-        for (Iterator<String> it = keySet.iterator(); it.hasNext(); ) {
-            String name = it.next();
-            File value = fileParams.get(name);
+        for (Map.Entry<String, File> entry : fileParams.entrySet()) {
+            String name = entry.getKey();
+            File value = entry.getValue();
             ds.writeBytes("--" + boundary + "\r\n");
             ds.writeBytes("Content-Disposition: form-data; name=\"" + name + "\"; filename=\"" + encode(value.getName()) + "\"\r\n");
             ds.writeBytes("Content-Type: " + getContentType(value) + "\r\n");
@@ -110,22 +90,18 @@ public class HttpPostUtil {
         }
     }
 
-    //获取文件的上传类型，图片格式为image/png,image/jpg等。非图片为application/octet-stream
     private String getContentType(File f) throws Exception {
-
-        //      return "application/octet-stream";  // 此行不再细分是否为图片，全部作为application/octet-stream 类型
-        ImageInputStream imagein = ImageIO.createImageInputStream(f);
-        if (imagein == null) {
+        ImageInputStream inputStream = ImageIO.createImageInputStream(f);
+        if (inputStream == null) {
             return "application/octet-stream";
         }
-        Iterator<ImageReader> it = ImageIO.getImageReaders(imagein);
-        if (!it.hasNext()) {
-            imagein.close();
+        Iterator<ImageReader> it = ImageIO.getImageReaders(inputStream);
+        inputStream.close();
+        if (it.hasNext()) {
+            return "image/" + it.next().getFormatName().toLowerCase();
+        } else {
             return "application/octet-stream";
         }
-        imagein.close();
-        return "image/" + it.next().getFormatName().toLowerCase();//将FormatName返回的值转换成小写，默认为大写
-
     }
 
     //把文件转换成字节数组
@@ -153,10 +129,11 @@ public class HttpPostUtil {
     }
 
     public static void main(String[] args) throws Exception {
-        HttpPostUtil u = new HttpPostUtil("http://localhost:8081/img/image/upload");
+        HttpPostUtil u = new HttpPostUtil("http://localhost:8080/imageServer/image/upload.do");
         u.addFileParameter("image", new File("D:\\index.jpg"));
-        u.addTextParameter("host", "http://localhost:8080/img/");
+        u.addTextParameter("host", "http://localhost:8080");
         byte[] b = u.send();
+        u.clearAllParameters();
         String result = new String(b);
         System.out.println(result);
     }

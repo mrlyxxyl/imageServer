@@ -51,18 +51,6 @@
             <td></td>
         </tr>
         <tr>
-            <td><input type="file" name="image"/></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td><input type="file" name="image"/></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td><input type="file" name="image"/></td>
-            <td></td>
-        </tr>
-        <tr>
             <td><input type="submit" value="上传"/></td>
             <td></td>
         </tr>
