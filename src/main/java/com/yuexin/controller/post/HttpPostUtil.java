@@ -3,120 +3,70 @@ package com.yuexin.controller.post;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HttpPostUtil {
-    private URL url;
-    private HttpURLConnection conn;
-    private String boundary = "--------httpPost123";
-    private Map<String, String> textParams = new HashMap<String, String>();
-    private Map<String, File> fileParams = new HashMap<String, File>();
-    private DataOutputStream ds;
 
-    public HttpPostUtil(String url) throws Exception {
-        this.url = new URL(url);
-        conn = (HttpURLConnection) this.url.openConnection();
-        conn.setDoOutput(true);
-        conn.setUseCaches(false);
-        conn.setConnectTimeout(10000);
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-        conn.setRequestProperty("connection", "Keep-Alive");
-        conn.setRequestProperty("Charset", "UTF-8");
-        conn.setRequestProperty("Accept-Charset", "UTF-8");
-        conn.connect();
-    }
+    public static String upload(List<String> filePaths) {
+        try {
+            String BOUNDARY = "---------7d4a6d158c9"; // 定义数据分隔线
+            URL url = new URL("http://localhost:8081/img/image/upload.do");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setDoOutput(true);
+            conn.setDoInput(true);
+            conn.setUseCaches(false);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("connection", "Keep-Alive");
+            conn.setRequestProperty("user-agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)");
+            conn.setRequestProperty("Charset", "UTF-8");
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + BOUNDARY);
 
+            OutputStream out = new DataOutputStream(conn.getOutputStream());
+            byte[] end_data = ("\r\n--" + BOUNDARY + "--\r\n").getBytes();// 定义最后数据分隔线
+            int size = filePaths.size();
+            for (int i = 0; i < size; i++) {
+                String filePath = filePaths.get(i);
+                File file = new File(filePath);
+                StringBuilder sb = new StringBuilder();
+                sb.append("--");
+                sb.append(BOUNDARY);
+                sb.append("\r\n");
+                sb.append("Content-Disposition: form-data;name=\"image\";filename=\"" + file.getName() + "\"\r\n");//注意此处的name = image 要和服务器的接收参数保持一致
+                sb.append("Content-Type:application/octet-stream\r\n\r\n");
 
-    //增加一个普通字符串数据到form表单数据中
-    public void addTextParameter(String name, String value) {
-        textParams.put(name, value);
-    }
+                byte[] data = sb.toString().getBytes();
+                out.write(data);
+                DataInputStream in = new DataInputStream(new FileInputStream(file));
+                int bytes;
+                byte[] bufferOut = new byte[1024];
+                while ((bytes = in.read(bufferOut)) != -1) {
+                    out.write(bufferOut, 0, bytes);
+                }
+                out.write("\r\n".getBytes()); //多个文件时，二个文件之间加入这个
+                in.close();
+            }
+            out.write(end_data);
+            out.flush();
+            out.close();
 
-    //增加一个文件到form表单数据中
-    public void addFileParameter(String name, File value) {
-        fileParams.put(name, value);
-    }
-
-    // 清空所有已添加的form表单数据
-    public void clearAllParameters() {
-        textParams.clear();
-        fileParams.clear();
-    }
-
-    // 发送数据到服务器，返回一个字节包含服务器的返回结果的数组
-    public byte[] send() throws Exception {
-        ds = new DataOutputStream(conn.getOutputStream());
-        writeFileParams();
-        writeStringParams();
-        paramsEnd();
-        InputStream in = conn.getInputStream();
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        int b;
-        while ((b = in.read()) != -1) {
-            out.write(b);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String line;
+            StringBuffer result = new StringBuffer();
+            while ((line = reader.readLine()) != null) {
+                result.append(line);
+            }
+            return result.toString();
+        } catch (Exception e) {
+            System.out.println("发送POST请求出现异常！" + e);
+            e.printStackTrace();
         }
-        conn.disconnect();
-        return out.toByteArray();
+        return null;
     }
 
-    //普通字符串数据
-    private void writeStringParams() throws Exception {
-        for (Map.Entry<String, String> entry : textParams.entrySet()) {
-            ds.writeBytes("--" + boundary + "\r\n");
-            ds.writeBytes("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"\r\n");
-            ds.writeBytes("\r\n");
-            ds.writeBytes(encode(entry.getValue()) + "\r\n");
-        }
-    }
-
-    //文件数据
-    private void writeFileParams() throws Exception {
-        for (Map.Entry<String, File> entry : fileParams.entrySet()) {
-            String name = entry.getKey();
-            File value = entry.getValue();
-            ds.writeBytes("--" + boundary + "\r\n");
-            ds.writeBytes("Content-Disposition: form-data; name=\"" + name + "\"; filename=\"" + encode(value.getName()) + "\"\r\n");
-            ds.writeBytes("\r\n");
-            ds.write(getBytes(value));
-            ds.writeBytes("\r\n");
-        }
-    }
-
-    //把文件转换成字节数组
-    private byte[] getBytes(File f) throws Exception {
-        FileInputStream in = new FileInputStream(f);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] b = new byte[1024];
-        int n;
-        while ((n = in.read(b)) != -1) {
-            out.write(b, 0, n);
-        }
-        in.close();
-        return out.toByteArray();
-    }
-
-    //添加结尾数据
-    private void paramsEnd() throws Exception {
-        ds.writeBytes("--" + boundary + "--" + "\r\n");
-        ds.writeBytes("\r\n");
-    }
-
-    // 对包含中文的字符串进行转码，此为UTF-8。服务器那边要进行一次解码
-    private String encode(String value) throws Exception {
-        return URLEncoder.encode(value, "UTF-8");
-    }
-
-    public static void main(String[] args) throws Exception {
-        HttpPostUtil u = new HttpPostUtil("http://localhost:8080/imageServer/image/upload.do");
-        u.addFileParameter("image", new File("D:\\aa.jpg"));
-        u.addTextParameter("host", "http://localhost:8080");
-        byte[] b = u.send();
-        u.clearAllParameters();
-        String result = new String(b);
-        System.out.println(result);
-//        System.out.println(u.getContentType(new File("D:\\header.txt")));
+    public static void main(String[] args) {
+        List<String> filePaths = new ArrayList<String>();
+        filePaths.add("d:/aa.jpg");
+        System.out.println(upload(filePaths));
     }
 }

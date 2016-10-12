@@ -36,7 +36,7 @@ public class ImageController {
      */
     @RequestMapping(value = "upload")
     @ResponseBody
-    public Map<String, Object> upload(HttpServletRequest request, @RequestParam(required = false) MultipartFile[] image, String host) {
+    public Map<String, Object> upload(HttpServletRequest request, @RequestParam(required = false) MultipartFile[] image) {
         String contextPath = request.getContextPath();
         try {
             if (image != null && image.length > 0) {
@@ -61,7 +61,7 @@ public class ImageController {
                     }
                     fos.flush();
                     fos.close();
-                    imageUrls.add(host + contextPath + "/pictures/" + currDate + "/" + fileEName);
+                    imageUrls.add(contextPath + "/pictures/" + currDate + "/" + fileEName);
                 }
                 return GenResult.SUCCESS.genResult(imageUrls);
             } else {
