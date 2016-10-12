@@ -29,9 +29,7 @@ public class HttpPostUtil {
                 String filePath = filePaths.get(i);
                 File file = new File(filePath);
                 StringBuilder sb = new StringBuilder();
-                sb.append("--");
-                sb.append(BOUNDARY);
-                sb.append("\r\n");
+                sb.append("--").append(BOUNDARY).append("\r\n");
                 sb.append("Content-Disposition: form-data;name=\"image\";filename=\"" + file.getName() + "\"\r\n");//注意此处的name = image 要和服务器的接收参数保持一致
                 sb.append("Content-Type:application/octet-stream\r\n\r\n");
 
